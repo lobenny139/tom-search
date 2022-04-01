@@ -123,7 +123,6 @@ public class TestSearchService {
         int slop = 0;
         DataSet rs = service.search(indexName, sortColumn, timeOutSeconds, start,  size, keyword, minimumShouldMatch, slop, searchColumn1,searchColumn2, searchColumn3);
         System.out.println(new ObjectMapper().writeValueAsString(rs));
-
     }
 
 }
