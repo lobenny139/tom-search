@@ -274,7 +274,8 @@ public class SearchService implements ISearchService {
                     .query(multiMatchQueryBuilder)
                     .from(start)
                     .size(size).sort(sortColumn, SortOrder.DESC)
-                    .timeout(new TimeValue(timeOutSeconds, TimeUnit.SECONDS)).highlighter(highlightBuilder);
+                    .timeout(new TimeValue(timeOutSeconds, TimeUnit.SECONDS))
+                    .highlighter(highlightBuilder);
 
             //查詢
             SearchRequest searchRequest = new SearchRequest()
@@ -282,7 +283,7 @@ public class SearchService implements ISearchService {
                     .indices(indexName)
                     .source(sourceBuilder);
             SearchResponse response = getClient().search(searchRequest, RequestOptions.DEFAULT);
-            //
+
             //return convertResponse2DataSet( response );
 
             List<Map<String, Object>> list = new ArrayList<>();
@@ -309,7 +310,6 @@ public class SearchService implements ISearchService {
             ds.setDatas(list);
             ds.setHitsCount(response.getHits().getHits().length);
             return ds;
-
         }catch(Exception e){
             throw new RuntimeException(findExceptionRoorCause(e));
         }
