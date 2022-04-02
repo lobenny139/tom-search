@@ -3,10 +3,7 @@ package com.tom.search.test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tom.search.model.DataSet;
-import com.tom.search.model.DataSet;
-import com.tom.search.service.ISearchService;
-import org.assertj.core.util.diff.Delta;
-import org.elasticsearch.client.RestHighLevelClient;
+import com.tom.search.service.IDocService;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,37 +12,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = com.tom.search.TestApplication.class)
 @TestPropertySource(locations = "/test-application.properties")
-public class TestSearchService {
+public class TestDocService {
 
     @Autowired(required=true)
-    @Qualifier("searchService")
-    ISearchService service;
-
-    @Test
-    public  void testDropIndex()  {
-        String indexName="magazine";
-        System.out.println(service.dropIndex(indexName));
-    }
-
-    @Test
-    public void testCreateIndex() {
-        Map<String, String> columnInfos = new HashMap<String, String>();
-        columnInfos.put("createDate", "long");
-        columnInfos.put("author", "text");
-        columnInfos.put("title", "text");
-        columnInfos.put("content", "text");
-        String indexName="magazine";
-        System.out.println(service.createIndex(indexName, columnInfos));
-    }
+    @Qualifier("docService")
+    IDocService service;
 
     @Test
     public void testAddDoc(){
@@ -102,26 +80,20 @@ public class TestSearchService {
     }
 
     @Test
-    public void testGetIndexFieldsInfo() throws IOException {
+    public void testSearchDoc() throws JsonProcessingException {
         String indexName="magazine";
-        List<Map<String, Object>> fieldsInfo = service.getIndexFieldsInfo(indexName);
-        System.out.println(new ObjectMapper().writeValueAsString(fieldsInfo));
-    }
-
-    @Test
-    public void testSearch() throws JsonProcessingException {
-        String indexName="magazine";
-        String keyword = " 談判";
+        String keyword = "佑之";
         String searchColumn1 = "author";
         String searchColumn2 = "title";
         String searchColumn3 = "content";
-        String sortColumn = "createDate";
+        Map<String, Integer> sortColumn = new HashMap<>();
+        sortColumn.put("createDate",0);
         int start = 0;
         int size = 100;
         int timeOutSeconds = 10;
         int minimumShouldMatch = 100;
         int slop = 0;
-        DataSet rs = service.search(indexName, sortColumn, timeOutSeconds, start,  size, keyword, minimumShouldMatch, slop, searchColumn1,searchColumn2, searchColumn3);
+        DataSet rs = service.searchDoc(indexName, keyword, sortColumn, timeOutSeconds, start,  size, minimumShouldMatch, slop, searchColumn1,searchColumn2, searchColumn3);
         System.out.println(new ObjectMapper().writeValueAsString(rs));
     }
 
