@@ -40,7 +40,7 @@ public class IndexService implements IIndexService {
 
     @Override
     public List<Map<String, Object>> getIndexFieldsInfo(String indexName) {
-        logger.info("準備取得索引[" + indexName +"]欄位資訊.");
+        logger.info("準備取得索引[" + indexName + "]欄位資訊.");
         try {
             //指定索引
             GetMappingsRequest getMappings = new GetMappingsRequest().indices(indexName);
@@ -100,7 +100,6 @@ public class IndexService implements IIndexService {
                         }
                         builder.endObject();
                     }
-
                 }
                 builder.endObject();
             }

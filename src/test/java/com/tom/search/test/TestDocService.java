@@ -58,8 +58,16 @@ public class TestDocService {
         columnValues.put("content", sb.toString());
 
         System.out.println(service.addDoc(indexName, id, columnValues));
+    }
 
-
+    @Test
+    public void testUpdateDoc() throws JsonProcessingException {
+        String indexName="magazine";
+        String id="2";
+        Map<String, Object> columnValues = new HashMap<>();
+        columnValues.put("createDate", new Date().getTime() );
+        columnValues.put("author", "劉淑琴/張佑之核稿" );
+        System.out.println(service.updateDoc(indexName, id, columnValues));
     }
 
     @Test

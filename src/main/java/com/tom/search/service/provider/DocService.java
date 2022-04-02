@@ -1,24 +1,36 @@
 package com.tom.search.service.provider;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tom.search.model.DataSet;
 import com.tom.search.service.IDocService;
 import lombok.Getter;
 import lombok.Setter;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.MultiMatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.UpdateByQueryAction;
+import org.elasticsearch.index.reindex.UpdateByQueryRequestBuilder;
+import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.script.Script;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
@@ -28,9 +40,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.elasticsearch.core.query.UpdateQuery;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -67,10 +81,38 @@ public class DocService implements IDocService {
     }
 
     @Override
+    public boolean updateDoc(String indexName, String id, Map<String, Object> columnValue)  {
+        //https://www.4k8k.xyz/article/u013034223/108607976
+        try {
+            logger.info("準備更新數據[id=" + id + "].");
+            UpdateRequest updateRequest = new UpdateRequest();
+            //指定索引name、type和id
+            updateRequest.index(indexName).type("_doc").id(id);
+            //指定更新的字段，map格式
+            updateRequest.doc(columnValue);
+            //或者指定更新的字段，json格式传递，同局部更新代码V1版，加上XContentType.JSON即可
+            //updateRequest.doc(JSON.toJSONString(map),XContentType.JSON);
+            //如果要更新的文档在更新操作的get和索引阶段之间被另一个操作更改，那么要重试多少次更新操作
+            updateRequest.retryOnConflict(3);
+            updateRequest.fetchSource(true);
+            UpdateResponse response = getClient().update(updateRequest, RequestOptions.DEFAULT);
+            logger.info("成功寫入數據[id=" + id + "].");
+            return (response.getResult() == DocWriteResponse.Result.UPDATED);
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new RuntimeException("無法更新數據[id=" + id + "], cause by " + e.getMessage());
+        }
+    }
+
+    @Override
     public DataSet getDoc(String indexName, String id)  {
         try {
             logger.info("準備在索引[" + indexName + "]取得文件[" + id + "].");
-            GetRequest request = new GetRequest(indexName, id);
+            GetRequest request = new GetRequest();
+
+            //设置请求参数 --- 表示要查询user索引中id为1001的文档内容
+            request.index(indexName).id(id);
+
             GetResponse response = getClient().get(request, RequestOptions.DEFAULT);
             if( response.getSourceAsMap() != null && response.getSourceAsMap().size() > 0){
                 response.getSourceAsMap().put("id", response.getId());

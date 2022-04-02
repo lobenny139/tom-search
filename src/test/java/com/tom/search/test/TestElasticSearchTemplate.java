@@ -3,7 +3,6 @@ package com.tom.search.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.util.EntityUtils;
-import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
@@ -234,7 +233,8 @@ public class TestElasticSearchTemplate {
     public void testGetDoc() throws IOException {
         String indexName = "magazine";
         String docId = "1";
-        GetRequest request = new GetRequest(indexName, docId);
+        GetRequest request = new GetRequest();
+        request.index(indexName).id(docId);
         GetResponse response = restHighLevelClient.get(request, RequestOptions.DEFAULT);
         System.out.println(response);
     }
@@ -243,7 +243,8 @@ public class TestElasticSearchTemplate {
     public void testDelDoc() throws IOException {
         String indexName = "magazine";
         String docId = "ldKiq38Bkr8qLtIopJ2E";
-        DeleteRequest request = new DeleteRequest( indexName, docId);
+        DeleteRequest request = new DeleteRequest( );
+        request.index(indexName).id(docId);
         DeleteResponse deleteResponse = restHighLevelClient.delete(request, RequestOptions.DEFAULT);
         System.out.println(deleteResponse);
         System.out.println(deleteResponse.getId());
@@ -317,7 +318,7 @@ public class TestElasticSearchTemplate {
                 .source(sourceBuilder);
 
         SearchResponse response = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
-        System.out.println("結果總數："+ response.getHits().getTotalHits().value);
+        System.out.println("結果總數："+ response.getHits().getHits().length);
         SearchHits hits = response.getHits();  //SearchHits提供有關所有匹配的全域性資訊，例如總命中數或最高分數：
         SearchHit[] searchHits = hits.getHits();
         for (SearchHit hit : searchHits) {
@@ -392,8 +393,8 @@ public class TestElasticSearchTemplate {
         SearchHits hits = searchResponse.getHits();
 
         // 获取命中总记录数
-        TotalHits totalHits = hits.getTotalHits();
-        System.out.println(">>>>>>>>>>>>>total: " + totalHits);
+
+        System.out.println(">>>>>>>>>>>>>total: " + hits.getHits().length);
 
 
     }
