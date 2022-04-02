@@ -64,13 +64,7 @@ public class DocService implements IDocService {
     public boolean addDoc(String indexName, String id, Map<String, Object> columnValue) {
         try{
             logger.info("準備寫入數據[id=" + id + "].");
-            XContentBuilder xcontent = XContentFactory.jsonBuilder();
-            xcontent.startObject();
-            for (Object key : columnValue.keySet()) {
-                xcontent.field(key.toString(), columnValue.get(key));
-            }
-            xcontent.endObject();
-            IndexRequest request = new IndexRequest(indexName).source(xcontent).id(id);
+            IndexRequest request = new IndexRequest(indexName).source(columnValue).id(id);
             IndexResponse response = getClient().index( request, RequestOptions.DEFAULT);
             logger.info("成功寫入數據[id=" + id + "].");
             return (response.getResult() == DocWriteResponse.Result.CREATED);
@@ -86,8 +80,7 @@ public class DocService implements IDocService {
         try {
             logger.info("準備更新數據[id=" + id + "].");
             UpdateRequest updateRequest = new UpdateRequest();
-            //指定索引name、type和id
-            updateRequest.index(indexName).type("_doc").id(id);
+            updateRequest.index(indexName).id(id);
             //指定更新的字段，map格式
             updateRequest.doc(columnValue);
             //或者指定更新的字段，json格式传递，同局部更新代码V1版，加上XContentType.JSON即可
@@ -96,7 +89,7 @@ public class DocService implements IDocService {
             updateRequest.retryOnConflict(3);
             updateRequest.fetchSource(true);
             UpdateResponse response = getClient().update(updateRequest, RequestOptions.DEFAULT);
-            logger.info("成功寫入數據[id=" + id + "].");
+            logger.info("成功更新數據[id=" + id + "].");
             return (response.getResult() == DocWriteResponse.Result.UPDATED);
         }catch(Exception e){
             e.printStackTrace();
