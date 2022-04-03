@@ -5,6 +5,10 @@ import com.tom.search.service.IDocService;
 import lombok.Getter;
 import lombok.Setter;
 import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -31,6 +35,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -50,38 +55,81 @@ public class DocService implements IDocService {
     protected RestHighLevelClient client;
 
     @Override
-    public boolean addDoc(String indexName, String id, Map<String, Object> columnValue) {
+    public boolean delDoc(String indexName, String id) {
+        try {
+            logger.info("準備刪除文件[id=" + id + "].");
+            DeleteRequest request = new DeleteRequest();
+            request.index(indexName).id(id);
+            DeleteResponse response = getClient().delete(request, RequestOptions.DEFAULT);
+            logger.info("成功刪除文件[id=" + id + "].");
+            return (response.getResult() == DocWriteResponse.Result.DELETED);
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new RuntimeException("無法刪除文件[id=" + id + "], cause by " + e.getMessage());
+        }
+    }
+
+
+    @Override
+    public boolean updateOrInsertDocs(String indexName, List<Map<String, Object>> records) {
+        logger.info("準備批量寫入文件.");
+        StringBuilder sb = null;
+        try {
+            BulkRequest request = new BulkRequest();
+            sb = new StringBuilder();
+
+            for(Map<String, Object> record : records){
+                String id = record.get("id").toString();
+                sb.append(id + ",");
+                record.remove("id");
+                request.add(new UpdateRequest().index(indexName).id(id).doc(record).upsert());
+            }
+
+            sb = new StringBuilder(sb.substring(0, sb.length() - 1));
+            getClient().bulk(request, RequestOptions.DEFAULT);
+            logger.info("成功批量寫入文件[id=" + sb + "].");
+            return true;
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new RuntimeException("無法寫入文件[id=" + sb + "], cause by " + e.getMessage());
+        }
+    }
+
+
+
+    @Override
+    public boolean addDoc(String indexName, String id, Map<String, Object> record) {
         try{
-            logger.info("準備寫入數據[id=" + id + "].");
-            IndexRequest request = new IndexRequest(indexName).source(columnValue).id(id);
+            logger.info("準備寫入文件[id=" + id + "].");
+            IndexRequest request = new IndexRequest(indexName).source(record).id(id);
             IndexResponse response = getClient().index( request, RequestOptions.DEFAULT);
-            logger.info("成功寫入數據[id=" + id + "].");
+            logger.info("成功寫入文件[id=" + id + "].");
             return (response.getResult() == DocWriteResponse.Result.CREATED);
         }catch(Exception e){
             e.printStackTrace();
-            throw new RuntimeException("無法寫入數據[id=" + id + "], cause by " + e.getMessage());
+            throw new RuntimeException("無法寫入文件[id=" + id + "], cause by " + e.getMessage());
         }
     }
 
     @Override
-    public boolean updateDoc(String indexName, String id, Map<String, Object> columnValue)  {
+    public boolean updateDoc(String indexName, String id, Map<String, Object> updateColumns)  {
         try {
-            logger.info("準備更新數據[id=" + id + "].");
+            logger.info("準備更新文件[id=" + id + "].");
             UpdateRequest updateRequest = new UpdateRequest();
             updateRequest.index(indexName).id(id);
             //指定更新的字段，map格式
-            updateRequest.doc(columnValue);
+            updateRequest.doc(updateColumns);
             //或者指定更新的字段，json格式传递，同局部更新代码V1版，加上XContentType.JSON即可
             //updateRequest.doc(JSON.toJSONString(map),XContentType.JSON);
             //如果要更新的文档在更新操作的get和索引阶段之间被另一个操作更改，那么要重试多少次更新操作
             updateRequest.retryOnConflict(3);
             updateRequest.fetchSource(true);
             UpdateResponse response = getClient().update(updateRequest, RequestOptions.DEFAULT);
-            logger.info("成功更新數據[id=" + id + "].");
+            logger.info("成功更新文件[id=" + id + "].");
             return (response.getResult() == DocWriteResponse.Result.UPDATED);
         }catch(Exception e){
             e.printStackTrace();
-            throw new RuntimeException("無法更新數據[id=" + id + "], cause by " + e.getMessage());
+            throw new RuntimeException("無法更新文件[id=" + id + "], cause by " + e.getMessage());
         }
     }
 
@@ -191,20 +239,17 @@ public class DocService implements IDocService {
     @Override
     public DataSet searchDoc(   String indexName,
                                 String keyWord,
-                                Map<String, Integer> sortColumnInfo,
+                                Map<String, Integer> sortedColumn,
                                 int timeOutSeconds,
                                 int start,
                                 int size,
                                 int minimumShouldMatch,
                                 int slop,
                                 String... searchColumns  )  {
-        StringBuilder sb = new StringBuilder();
-        for(String searchColumn : searchColumns){
-            sb.append(searchColumn+ ",");
-        }
-        sb = new StringBuilder(sb.substring(0, sb.length()-1) );
 
-        logger.info("準備以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + sb.toString() + "], 從" + start + "筆開始, 取" + size + "筆." );
+        String expandSearchColumns = array2String(searchColumns);
+
+        logger.info("準備以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆." );
         try {
             MultiMatchQueryBuilder multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(keyWord, searchColumns);
             multiMatchQueryBuilder.minimumShouldMatch( minimumShouldMatch + "%" );
@@ -230,15 +275,13 @@ public class DocService implements IDocService {
                     .from(start)
                     .timeout(new TimeValue(timeOutSeconds, TimeUnit.SECONDS))
                     .highlighter(highlightBuilder);
-//                    .size(size).sort(sortColumn, SortOrder.DESC)
 
             StringBuilder sb2 = new StringBuilder();
-            for(Map.Entry entry:sortColumnInfo.entrySet()){
+            for(Map.Entry entry:sortedColumn.entrySet()){
                 sb2.append(entry.getKey().toString() + ":" + ( entry.getValue().toString().equals("0")  ? "ASC" : "DESC") + ",");
                 sourceBuilder.sort(entry.getKey().toString(), (entry.getValue().toString().equals("0")  ? SortOrder.ASC : SortOrder.DESC) );
             }
             sb2 = new StringBuilder(sb2.substring(0, sb2.length()-1) );
-
 
             //查詢
             SearchRequest searchRequest = new SearchRequest()
@@ -248,38 +291,54 @@ public class DocService implements IDocService {
             SearchResponse response = getClient().search(searchRequest, RequestOptions.DEFAULT);
 
             logger.info("找到" + response.getHits().getHits().length + "筆記錄,以[" + sb2 + "]排序.");
-            //return convertResponse2DataSet( response );
+            return convertResponse2DataSet( response, searchColumns );
 
-            List<Map<String, Object>> list = new ArrayList<>();
-            for (SearchHit hit : response.getHits().getHits()) {
-                Map<String, Object> sourceAsMap = hit.getSourceAsMap();
-                sourceAsMap.put("id", hit.getId());
-                //解析高亮字段
-                Map<String, HighlightField> highlightFields = hit.getHighlightFields();
-                for(int i = 0; i < searchColumns.length; i++){
-                    HighlightField field= highlightFields.get(searchColumns[i]);
-                    if(field!= null){
-                        Text[] fragments = field.fragments();
-                        String n_field = "";
-                        for (Text fragment : fragments) {
-                            n_field += fragment;
-                        }
-                        //高亮标题覆盖原标题
-                        sourceAsMap.put(searchColumns[i],n_field);
-                    }
-                }
-                list.add(hit.getSourceAsMap());
-            }
-
-            DataSet ds = new DataSet();
-            ds.setDatas(list);
-            ds.setHitCounts(response.getHits().getHits().length);
-            return ds;
+//            List<Map<String, Object>> list = new ArrayList<>();
+//            for (SearchHit hit : response.getHits().getHits()) {
+//                Map<String, Object> sourceAsMap = hit.getSourceAsMap();
+//                sourceAsMap.put("id", hit.getId());
+//                //解析高亮字段
+//                Map<String, HighlightField> highlightFields = hit.getHighlightFields();
+//                for(int i = 0; i < searchColumns.length; i++){
+//                    HighlightField field= highlightFields.get(searchColumns[i]);
+//                    if(field!= null){
+//                        Text[] fragments = field.fragments();
+//                        String n_field = "";
+//                        for (Text fragment : fragments) {
+//                            n_field += fragment;
+//                        }
+//                        //高亮标题覆盖原标题
+//                        sourceAsMap.put(searchColumns[i],n_field);
+//                    }
+//                }
+//                list.add(hit.getSourceAsMap());
+//            }
+//
+//            DataSet ds = new DataSet();
+//            ds.setDatas(list);
+//            ds.setHitCounts(response.getHits().getHits().length);
+//            return ds;
         }catch(Exception e){
             e.printStackTrace();
-            throw new RuntimeException("無法以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + sb.toString() + "], 從" + start + "筆開始, 取" + size + "筆, cause by " + e.getMessage());
+            throw new RuntimeException("無法以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆, cause by " + e.getMessage());
         }
     }
 
+    protected String map2String(Map<String, Object> map){
+        StringBuilder sb = new StringBuilder();
+        for(Map.Entry entry:map.entrySet()){
+            sb.append(entry.getKey().toString() + ":" +  entry.getValue() + ",");
+        }
+        return (new StringBuilder(sb.substring(0, sb.length()-1) ) ).toString();
+    }
+
+    protected String array2String(String[] results){
+        StringBuilder sb = new StringBuilder();
+        for(String result : results){
+            sb.append(result + ",");
+        }
+        sb = new StringBuilder(sb.substring(0, sb.length()-1) );
+        return sb.toString();
+    }
 
 }

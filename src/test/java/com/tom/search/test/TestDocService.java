@@ -12,9 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = com.tom.search.TestApplication.class)
@@ -26,6 +24,31 @@ public class TestDocService {
     IDocService service;
 
     @Test
+    public void testAddDocs(){
+        String indexName="magazine";
+        Map<String, Object> columnValue = new HashMap<String, Object>();
+        List<Map<String, Object>> records = new ArrayList<>();
+
+        columnValue.put("createDate", new Date().getTime() );
+        columnValue.put("id", "3");
+        columnValue.put("author", "李白");
+        columnValue.put("title", "將進酒");
+        columnValue.put("content", "君不見黃河之水天上來 ， 奔流到海不復回!君不見高堂明鏡悲白髮 ， 朝如青絲暮成雪。人生得意須盡歡 ， 莫使金樽空對月。天生我材必有用 ， 千金散盡還復來。烹羊宰牛且為樂 ， 會須一飲三百杯。岑夫子 ， 丹丘生 ， 將進酒 ， 杯莫停。與君歌一曲 ， 請君為我傾耳聽。鐘鼓饌玉不足貴 ， 但願長醉不願醒。古來聖賢皆寂寞 ， 唯有飲者留其名。陳王昔時宴平樂 ， 斗酒十千恣歡謔。主人何為言少錢 ， 徑須沽取對君酌。五花馬 ， 千金裘 ，呼兒將出換美酒 ， 與爾同銷萬古愁。");
+        records.add(columnValue);
+
+        Map<String, Object> columnValue2 = new HashMap<String, Object>();
+        columnValue2.put("id", "4");
+        columnValue2.put("createDate", new Date().getTime() );
+        columnValue2.put("author", "李白");
+        columnValue2.put("title", "靜夜思");
+        columnValue2.put("content", "床前明月光，疑是地上霜。举头望明月，低头思故乡。");
+        records.add(columnValue2);
+
+        System.out.println(service.updateOrInsertDocs(indexName, records));
+
+    }
+
+        @Test
     public void testAddDoc(){
         String indexName="magazine";
         String id="1";
@@ -73,7 +96,7 @@ public class TestDocService {
     @Test
     public void testGetDoc() throws JsonProcessingException {
         String indexName="magazine";
-        String id="2";
+        String id="4";
         DataSet ds  = service.getDoc(indexName, id);
         System.out.println(new ObjectMapper().writeValueAsString(ds));
     }
@@ -90,7 +113,7 @@ public class TestDocService {
     @Test
     public void testSearchDoc() throws JsonProcessingException {
         String indexName="magazine";
-        String keyword = "宮稱尚無突破";
+        String keyword = "李白";
         String searchColumn1 = "author";
         String searchColumn2 = "title";
         String searchColumn3 = "content";

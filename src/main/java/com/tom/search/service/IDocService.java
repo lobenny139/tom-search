@@ -2,21 +2,49 @@ package com.tom.search.service;
 
 import com.tom.search.model.DataSet;
 
+import java.util.List;
 import java.util.Map;
 
 public interface IDocService {
 
     /**
+     * 刪除文件
+     * @param indexName
+     * @param id
+     * @return
+     */
+    public boolean delDoc(String indexName, String id);
+
+    /**
+     * 批量寫入文件(如果存在，更新，否則寫入)
+     * @param indexName 索引名稱
+     * @param records 文件(完全的), 裡面必須有鍵
+     * @return
+     */
+    public boolean updateOrInsertDocs(String indexName, List<Map<String, Object>> records);
+
+    /**
      * 在索引中索引加入文件
      * @param indexName 索引名稱
      * @param id 文件id
-     * @param columnValue 欄位名稱及值
+     * @param record 文檔欄位名稱及值, eg:{"content":"Wellcome to ES"},{"title","Hello World"}
      * @return
      */
-    public boolean addDoc(String indexName, String id, Map<String, Object> columnValue);
+    public boolean addDoc(String indexName,
+                          String id,
+                          Map<String,
+                          Object> record);
 
 
-    public boolean updateDoc(String indexName, String id, Map<String, Object> columnValue) ;
+    /**
+     * 更新文件
+     * @param indexName
+     * @param id
+     * @param updateColumns 需要更新欄位
+     * @return
+     */
+    public boolean updateDoc(String indexName, String id,
+                             Map<String, Object> updateColumns) ;
 
     /**
      * 以id取得文件
@@ -39,10 +67,10 @@ public interface IDocService {
                              int size);
 
     /**
-     * 以關健字查詢
+     * 以關健字查詢文件
      * @param indexName 索引名稱
      * @param keyWord 關健字
-     * @param sortColumnInfo 排序欄位
+     * @param sortedColumn 排序欄位
      * @param timeOutSeconds ES 服務器timeout時間
      * @param start 從那筆開始
      * @param size  共取幾筆
@@ -53,7 +81,7 @@ public interface IDocService {
      */
     public DataSet searchDoc(   String indexName,
                                 String keyWord,
-                                Map<String, Integer> sortColumnInfo,
+                                Map<String, Integer> sortedColumn,
                                 int timeOutSeconds,
                                 int start,
                                 int size,
@@ -62,7 +90,7 @@ public interface IDocService {
                                 String... searchColumns  );
 
     /**
-     * 以關健字查詢
+     * 以關健字查詢文件
      * @param indexName
      * @param keyWord
      * @param sortColumnInfo
