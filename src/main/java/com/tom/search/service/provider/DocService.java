@@ -76,7 +76,6 @@ public class DocService implements IDocService {
 
     @Override
     public boolean updateDoc(String indexName, String id, Map<String, Object> columnValue)  {
-        //https://www.4k8k.xyz/article/u013034223/108607976
         try {
             logger.info("準備更新數據[id=" + id + "].");
             UpdateRequest updateRequest = new UpdateRequest();
