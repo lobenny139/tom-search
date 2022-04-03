@@ -113,7 +113,7 @@ public class TestDocService {
     @Test
     public void testSearchDoc() throws JsonProcessingException {
         String indexName="magazine";
-        String keyword = "李白";
+        String keyword = "白";
         String searchColumn1 = "author";
         String searchColumn2 = "title";
         String searchColumn3 = "content";

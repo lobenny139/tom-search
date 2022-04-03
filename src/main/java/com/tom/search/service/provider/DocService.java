@@ -72,7 +72,7 @@ public class DocService implements IDocService {
 
     @Override
     public boolean updateOrInsertDocs(String indexName, List<Map<String, Object>> records) {
-        logger.info("準備批量寫入文件.");
+        logger.info("準備批量寫入/更新文件.");
         StringBuilder sb = null;
         try {
             BulkRequest request = new BulkRequest();
@@ -87,11 +87,11 @@ public class DocService implements IDocService {
 
             sb = new StringBuilder(sb.substring(0, sb.length() - 1));
             getClient().bulk(request, RequestOptions.DEFAULT);
-            logger.info("成功批量寫入文件[id=" + sb + "].");
+            logger.info("成功批量寫入/更新文件[id=" + sb + "].");
             return true;
         }catch(Exception e){
             e.printStackTrace();
-            throw new RuntimeException("無法寫入文件[id=" + sb + "], cause by " + e.getMessage());
+            throw new RuntimeException("無法寫入/更新文件[id=" + sb + "], cause by " + e.getMessage());
         }
     }
 
