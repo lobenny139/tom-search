@@ -1,11 +1,14 @@
 package com.tom.search.service.provider;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tom.search.model.DataSet;
 import com.tom.search.service.IDocService;
 import lombok.Getter;
 import lombok.Setter;
 import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequest;
@@ -70,7 +73,7 @@ public class DocService implements IDocService {
 
     @Override
     public boolean updateOrInsertDocs(String indexName, List<Map<String, Object>> records) {
-        logger.info("準備批量寫入/更新文件.");
+        logger.info("準備寫入/更新" + records.size() +"筆文件.");
         StringBuilder sb = null;
         try {
             BulkRequest request = new BulkRequest();
@@ -80,13 +83,21 @@ public class DocService implements IDocService {
                 String id = record.get("id").toString();
                 sb.append(id + ",");
                 record.remove("id");
-                request.add(new UpdateRequest().index(indexName).id(id).doc(record).upsert());
+                request.add(
+                        new UpdateRequest().index(indexName).id(id).doc(record).retryOnConflict(3).fetchSource(true).upsert()
+                );
             }
 
             sb = new StringBuilder(sb.substring(0, sb.length() - 1));
-            getClient().bulk(request, RequestOptions.DEFAULT);
-            logger.info("成功批量寫入/更新文件[id=" + sb + "].");
-            return true;
+            BulkResponse response = getClient().bulk(request, RequestOptions.DEFAULT);
+            for (BulkItemResponse r : response.getItems()) {
+                if (r.isFailed()) {
+                    logger.error("{}\t{}", r.getId(), r.getFailureMessage());
+                }
+            }
+            logger.info("成功寫入/更新" + response.getItems().length + "筆文件.");
+
+            return !response.hasFailures();
         }catch(Exception e){
             e.printStackTrace();
             throw new RuntimeException("無法寫入/更新文件[id=" + sb + "], cause by " + e.getMessage());
@@ -291,31 +302,6 @@ public class DocService implements IDocService {
             logger.info("找到" + response.getHits().getHits().length + "筆記錄,以[" + sb2 + "]排序.");
             return convertResponse2DataSet( response, searchColumns );
 
-//            List<Map<String, Object>> list = new ArrayList<>();
-//            for (SearchHit hit : response.getHits().getHits()) {
-//                Map<String, Object> sourceAsMap = hit.getSourceAsMap();
-//                sourceAsMap.put("id", hit.getId());
-//                //解析高亮字段
-//                Map<String, HighlightField> highlightFields = hit.getHighlightFields();
-//                for(int i = 0; i < searchColumns.length; i++){
-//                    HighlightField field= highlightFields.get(searchColumns[i]);
-//                    if(field!= null){
-//                        Text[] fragments = field.fragments();
-//                        String n_field = "";
-//                        for (Text fragment : fragments) {
-//                            n_field += fragment;
-//                        }
-//                        //高亮标题覆盖原标题
-//                        sourceAsMap.put(searchColumns[i],n_field);
-//                    }
-//                }
-//                list.add(hit.getSourceAsMap());
-//            }
-//
-//            DataSet ds = new DataSet();
-//            ds.setDatas(list);
-//            ds.setHitCounts(response.getHits().getHits().length);
-//            return ds;
         }catch(Exception e){
             e.printStackTrace();
             throw new RuntimeException("無法以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆, cause by " + e.getMessage());

@@ -42,10 +42,34 @@ public class TestDocService {
         columnValue2.put("author", "李白");
         columnValue2.put("title", "靜夜思");
         columnValue2.put("content", "床前明月光，疑是地上霜。举头望明月，低头思故乡。");
+
         records.add(columnValue2);
 
         System.out.println(service.updateOrInsertDocs(indexName, records));
+    }
 
+    @Test
+    public void testAddOrUpdateDoc(){
+        String indexName="magazine";
+        Map<String, Object> record = new HashMap<String, Object>();
+        List<Map<String, Object>> records = new ArrayList<>();
+
+        record.put("createDate", new Date().getTime() );
+        record.put("id", "5");
+        record.put("author", "李白");
+        record.put("title", "飲馬長城窟行");
+        record.put("content", "青青河畔草，綿綿思遠道。遠道不可思，宿昔夢見之。夢見在我傍，忽覺在他鄉。他鄉各異縣，輾轉不相見。枯桑知天風，海水知天寒。入門各自媚，誰肯相爲言。客從遠方來，遺我雙鯉魚。呼兒烹鯉魚，中有尺素書。長跪讀素書，書中竟何如。上言加餐食，下言長相憶。");
+        records.add(record);
+
+        System.out.println(service.updateOrInsertDocs(indexName, records));
+
+    }
+
+    @Test
+    public void testDelDoc(){
+        String indexName="magazine";
+        String id="6";
+        System.out.println(service.delDoc(indexName, id));
     }
 
         @Test
@@ -96,7 +120,7 @@ public class TestDocService {
     @Test
     public void testGetDoc() throws JsonProcessingException {
         String indexName="magazine";
-        String id="4";
+        String id="5";
         DataSet ds  = service.getDoc(indexName, id);
         System.out.println(new ObjectMapper().writeValueAsString(ds));
     }
@@ -113,7 +137,7 @@ public class TestDocService {
     @Test
     public void testSearchDoc() throws JsonProcessingException {
         String indexName="magazine";
-        String keyword = "白";
+        String keyword = "李白";
         String searchColumn1 = "author";
         String searchColumn2 = "title";
         String searchColumn3 = "content";
