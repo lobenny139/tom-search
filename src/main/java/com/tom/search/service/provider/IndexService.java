@@ -76,6 +76,16 @@ public class IndexService implements IIndexService {
 
     @Override
     public boolean createIndex(String indexName, Map<String, String> columnsInfo) {
+        /*
+        https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-cjk-bigram-tokenfilter.html
+        curl -X GET "localhost:9200/_analyze?pretty" -H 'Content-Type: application/json' -d'
+        {
+            "tokenizer" : "standard",
+                "filter" : ["cjk_bigram"],
+            "text" : "東京都は、日本の首都であり"
+        }'
+        */
+
         if(existsIndex(indexName)){
             throw  new RuntimeException("索引[" + indexName+"]已經存在.");
         }

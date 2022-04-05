@@ -15,6 +15,8 @@ import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.MultiSearchRequest;
+import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
@@ -30,11 +32,17 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.*;
+import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.search.suggest.Suggest;
+import org.elasticsearch.search.suggest.SuggestBuilder;
+import org.elasticsearch.search.suggest.SuggestBuilders;
+import org.elasticsearch.search.suggest.SuggestionBuilder;
+import org.elasticsearch.search.suggest.term.TermSuggestion;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +61,96 @@ public class TestElasticSearchTemplate {
 
     @Autowired
     RestHighLevelClient restHighLevelClient;
+
+
+    @Test
+    public void testBooleanQuery(){
+        String indexName="magazine";
+        BoolQueryBuilder qb = QueryBuilders.boolQuery();
+//  match_all
+//        qb.must(QueryBuilders.matchAllQuery()); //匹配所有记录5条
+
+//        {
+//            qb.must(QueryBuilders.termQuery("author", "李白")); // 3条
+//
+//        }
+//        {
+//            qb.must(QueryBuilders.termQuery("author", "李白"));
+//            qb.must(QueryBuilders.termQuery("content", "黃河")); ////1条
+//        }
+
+//        {
+//
+//            qb.should(QueryBuilders.queryStringQuery("淑琴核").field("author")); //2条，对字符串添加双引
+//            qb.should(QueryBuilders.queryStringQuery("李白").field("author"));
+//            qb.mustNot(QueryBuilders.queryStringQuery("故乡").field("content"));
+//        }
+
+        qb = QueryBuilders.boolQuery()
+//                .should(QueryBuilders.multiMatchQuery("李白"))
+                .must(QueryBuilders.multiMatchQuery("头望").minimumShouldMatch("100%").slop(0));
+
+
+//        qb.must(QueryBuilders.termQuery("type","1")).must(QueryBuilders.termQuery("categoryName","女装")) //0条
+//        qb.must(QueryBuilders.termQuery("categoryName", "女装")); //0
+
+
+        SearchSourceBuilder ssb = new SearchSourceBuilder().query(qb).from(0).size(60);// 影响聚合查询
+        try {
+            SearchResponse response = restHighLevelClient.search(
+                    new SearchRequest().indices(indexName).source(ssb),
+                    RequestOptions.DEFAULT);
+
+
+
+            System.out.println(response.getHits().getTotalHits().value);
+            SearchHit hits[] = response.getHits().getHits();
+            for (SearchHit hit : hits) {
+                Map<String, Object> sourceAsMap = hit.getSourceAsMap();
+                System.out.println(sourceAsMap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void testMultiSearch(){
+        String indexName="magazine";
+
+        MultiSearchRequest request = new MultiSearchRequest();
+        SearchRequest firstSearchRequest = new SearchRequest();
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.matchQuery("content", "綿綿思遠道"));
+        firstSearchRequest.source(searchSourceBuilder);
+        firstSearchRequest.indices(indexName);
+        request.add(firstSearchRequest);
+
+        SearchRequest secondSearchRequest = new SearchRequest();
+        searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.matchQuery("content", "蘇貞昌"));
+        secondSearchRequest.source(searchSourceBuilder);
+        secondSearchRequest.indices(indexName);
+        request.add(secondSearchRequest);
+
+        try {
+            MultiSearchResponse response = restHighLevelClient.msearch(request, RequestOptions.DEFAULT);
+            response.forEach(t->{
+                SearchResponse resp = t.getResponse();
+
+                Arrays.stream(resp.getHits().getHits())
+                        .forEach(i -> {
+                            System.out.println(i.getId());
+                            //System.out.println(i.getIndex());
+                            System.out.println(i.getSourceAsString());
+                            //System.out.println(i.getShard());
+                        });
+                System.out.println("total: " + resp.getHits().getTotalHits().value);
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     @Test
     public void indexExists() throws IOException {
@@ -248,6 +346,61 @@ public class TestElasticSearchTemplate {
         DeleteResponse deleteResponse = restHighLevelClient.delete(request, RequestOptions.DEFAULT);
         System.out.println(deleteResponse);
         System.out.println(deleteResponse.getId());
+    }
+
+    @Test
+    public void getEsInfo() throws IOException {
+
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.source(searchSourceBuilder);
+        //查询ES
+        SearchResponse response = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+        System.out.println(new ObjectMapper().writeValueAsString(response));
+    }
+
+    @Test
+    public void termSuggest() {
+        String indexName="magazine";
+
+        try {
+            // 1、创建search请求
+            //SearchRequest searchRequest = new SearchRequest();
+            SearchRequest searchRequest = new SearchRequest(indexName);
+
+            // 2、用SearchSourceBuilder来构造查询请求体 ,请仔细查看它的方法，构造各种查询的方法都在这。
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+
+            sourceBuilder.size(0);
+
+            //做查询建议
+            //词项建议
+            SuggestionBuilder termSuggestionBuilder = SuggestBuilders.termSuggestion("content").text("予以正面看待");
+            SuggestBuilder suggestBuilder = new SuggestBuilder();
+            suggestBuilder.addSuggestion("content", termSuggestionBuilder);
+            sourceBuilder.suggest(suggestBuilder);
+
+            searchRequest.source(sourceBuilder);
+            //3、发送请求
+            SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+
+            //4、处理响应
+            //搜索结果状态信息
+            if (RestStatus.OK.equals(searchResponse.status())) {
+                // 获取建议结果
+                Suggest suggest = searchResponse.getSuggest();
+                TermSuggestion termSuggestion = suggest.getSuggestion("content");
+                for (TermSuggestion.Entry entry : termSuggestion.getEntries()) {
+                    System.out.println("text: " + entry.getText().string());
+                    for (TermSuggestion.Entry.Option option : entry) {
+                        String suggestText = option.getText().string();
+                        System.out.println("   content : " + suggestText);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Test

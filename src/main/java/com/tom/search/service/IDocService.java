@@ -10,7 +10,7 @@ public interface IDocService {
     /**
      * 刪除文件
      * @param indexName
-     * @param id
+     * @param id 文件id
      * @return
      */
     public boolean delDoc(String indexName, String id);
@@ -18,7 +18,7 @@ public interface IDocService {
     /**
      * 批量寫入文件(如果存在，更新，否則寫入)
      * @param indexName 索引名稱
-     * @param records 文件(完全的), 裡面必須有鍵
+     * @param records 文件(完全的), 裡面必須有鍵id
      * @return
      */
     public boolean updateOrInsertDocs(String indexName, List<Map<String, Object>> records);
@@ -39,7 +39,7 @@ public interface IDocService {
     /**
      * 更新文件
      * @param indexName
-     * @param id
+     * @param id 文件id
      * @param updateColumns 需要更新欄位
      * @return
      */
@@ -106,6 +106,19 @@ public interface IDocService {
                                 int size,
                                 String... searchColumns  );
 
-
+    /**
+     * 以關健字查詢文件
+     * @param indexName
+     * @param keyWord
+     * @param sortedColumn
+     * @param start
+     * @param size
+     * @return
+     */
+    public DataSet searchDoc(   String indexName,
+                                String keyWord,
+                                Map<String, Integer> sortedColumn,
+                                int start,
+                                int size);
 
 }

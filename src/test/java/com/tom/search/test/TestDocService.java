@@ -137,7 +137,7 @@ public class TestDocService {
     @Test
     public void testSearchDoc() throws JsonProcessingException {
         String indexName="magazine";
-        String keyword = "李白";
+        String keyword = "突破";
         String searchColumn1 = "author";
         String searchColumn2 = "title";
         String searchColumn3 = "content";
@@ -151,5 +151,18 @@ public class TestDocService {
         DataSet rs = service.searchDoc(indexName, keyword, sortColumn, timeOutSeconds, start,  size, minimumShouldMatch, slop, searchColumn1,searchColumn2, searchColumn3);
         System.out.println(new ObjectMapper().writeValueAsString(rs));
     }
+
+    @Test
+    public void testSearchDoc2() throws JsonProcessingException {
+        String indexName="magazine";
+        String keyword = "突破";
+        Map<String, Integer> sortColumn = new HashMap<>();
+        sortColumn.put("createDate",0);
+        int start = 0;
+        int size = 100;
+        DataSet rs = service.searchDoc(indexName, keyword, sortColumn, start,  size);
+        System.out.println(new ObjectMapper().writeValueAsString(rs));
+    }
+
 
 }

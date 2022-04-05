@@ -11,6 +11,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,9 +45,20 @@ public class TestIndexService {
 
     @Test
     public void testGetIndexFieldsInfo() throws IOException {
-        String indexName="magazine1";
+        String indexName="magazine";
         List<Map<String, Object>> fieldsInfo = service.getIndexFieldsInfo(indexName);
         System.out.println(new ObjectMapper().writeValueAsString(fieldsInfo));
+        List<String> stringColumnInIndex = new ArrayList<String>();
+        for(Map<String,Object> field : fieldsInfo){
+            for(Map.Entry entry:field.entrySet()){
+                System.out.println(entry.getKey() + "-" + entry.getValue());
+                if(entry.getValue().toString().toLowerCase().equals("text")){
+                    stringColumnInIndex.add(entry.getKey().toString());
+                }
+            }
+        }
+        String[] array = stringColumnInIndex.stream().toArray(String[]::new);
+        System.out.println(array[2]);
     }
 
 

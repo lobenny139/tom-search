@@ -1,8 +1,8 @@
 package com.tom.search.service.provider;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tom.search.model.DataSet;
 import com.tom.search.service.IDocService;
+import com.tom.search.service.IIndexService;
 import lombok.Getter;
 import lombok.Setter;
 import org.elasticsearch.action.DocWriteResponse;
@@ -54,6 +54,10 @@ public class DocService implements IDocService {
     @Autowired(required = true)
     @Qualifier(value = "restHighLevelClient")
     protected RestHighLevelClient client;
+
+    @Autowired(required=true)
+    @Qualifier("indexService")
+    protected IIndexService indexService;
 
     @Override
     public boolean delDoc(String indexName, String id) {
@@ -232,17 +236,26 @@ public class DocService implements IDocService {
 
     }
 
+    @Override
+    public DataSet searchDoc(   String indexName,
+                                String keyWord,
+                                Map<String, Integer> sortedColumn,
+                                int start,
+                                int size
+    ){
+        return searchDoc(indexName, keyWord, sortedColumn,  5, start, size, 100, 0,  null  );
+    }
 
 
 
     @Override
     public DataSet searchDoc(   String indexName,
                                 String keyWord,
-                                Map<String, Integer> sortColumnInfo,
+                                Map<String, Integer> sortedColumn,
                                 int start,
                                 int size,
                                 String... searchColumns  ) {
-        return searchDoc(indexName, keyWord, sortColumnInfo,  10, start, size, 100, 0,  searchColumns  );
+        return searchDoc(indexName, keyWord, sortedColumn,  5, start, size, 100, 0,  searchColumns  );
     }
 
     @Override
@@ -254,22 +267,39 @@ public class DocService implements IDocService {
                                 int size,
                                 int minimumShouldMatch,
                                 int slop,
-                                String... searchColumns  )  {
+                                String... searchColumns )  {
 
-        String expandSearchColumns = array2String(searchColumns);
-
-        logger.info("準備以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆." );
+        String expandSearchColumns = null;
+        if(searchColumns != null && searchColumns.length > 0){
+            expandSearchColumns = array2String(searchColumns);
+        }
+        if(expandSearchColumns != null){
+            logger.info("準備以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆." );
+        }else{
+            logger.info("準備以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 從" + start + "筆開始, 取" + size + "筆." );
+        }
         try {
-            MultiMatchQueryBuilder multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(keyWord, searchColumns);
+            MultiMatchQueryBuilder multiMatchQueryBuilder = null;
+            if(searchColumns != null && searchColumns.length > 0){
+                multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(keyWord, searchColumns);
+            }else{
+                multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(keyWord);
+            }
             multiMatchQueryBuilder.minimumShouldMatch( minimumShouldMatch + "%" );
             multiMatchQueryBuilder.slop(slop);
+
+            String[] stringColumnsInIndex = this.convertStringColumnInIndex2Array(indexName);
 
             ///高亮
             HighlightBuilder highlightBuilder = new HighlightBuilder();
             //设置高亮字段
-            for(int i = 0; i < searchColumns.length; i++){
-                highlightBuilder.field(searchColumns[i]);
+//            for(int i = 0; i < searchColumns.length; i++){
+//                highlightBuilder.field(searchColumns[i]);
+//            }
+            for(String colimnInIndex:stringColumnsInIndex){
+                highlightBuilder.field(colimnInIndex);
             }
+
             //如果要多个字段高亮,这项要为false
             highlightBuilder.requireFieldMatch(true);
             highlightBuilder.preTags("<span style='color:red'>");
@@ -300,11 +330,16 @@ public class DocService implements IDocService {
             SearchResponse response = getClient().search(searchRequest, RequestOptions.DEFAULT);
 
             logger.info("找到" + response.getHits().getHits().length + "筆記錄,以[" + sb2 + "]排序.");
-            return convertResponse2DataSet( response, searchColumns );
+//            return convertResponse2DataSet( response, searchColumns );
+            return convertResponse2DataSet( response, stringColumnsInIndex );
 
         }catch(Exception e){
             e.printStackTrace();
-            throw new RuntimeException("無法以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆, cause by " + e.getMessage());
+            if(expandSearchColumns != null && expandSearchColumns.length() > 0){
+                throw new RuntimeException("無法以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆, cause by " + e.getMessage());
+            }else{
+                throw new RuntimeException("無法以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 從" + start + "筆開始, 取" + size + "筆, cause by " + e.getMessage());
+            }
         }
     }
 
@@ -323,6 +358,19 @@ public class DocService implements IDocService {
         }
         sb = new StringBuilder(sb.substring(0, sb.length()-1) );
         return sb.toString();
+    }
+
+    protected String[] convertStringColumnInIndex2Array(String indexName){
+        List<Map<String, Object>> fieldsInfo = getIndexService().getIndexFieldsInfo(indexName);
+        List<String> stringColumnInIndex = new ArrayList<String>();
+        for(Map<String,Object> field : fieldsInfo){
+            for(Map.Entry entry:field.entrySet()){
+                if(entry.getValue().toString().toLowerCase().equals("text")){
+                    stringColumnInIndex.add(entry.getKey().toString());
+                }
+            }
+        }
+        return stringColumnInIndex.stream().toArray(String[]::new);
     }
 
 }
