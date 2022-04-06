@@ -58,7 +58,6 @@ public class TestIndexService {
             }
         }
         String[] array = stringColumnInIndex.stream().toArray(String[]::new);
-        System.out.println(array[2]);
     }
 
 

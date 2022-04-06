@@ -15,19 +15,28 @@ public interface IDocService {
      */
     public boolean delDoc(String indexName, String id);
 
+
     /**
-     * 批量寫入文件(如果存在，更新，否則寫入)
+     * 批量寫入文件
      * @param indexName 索引名稱
-     * @param records 文件(完全的), 裡面必須有鍵id
+     * @param records 文件(完全的), 裡面必須有column id(鍵), eg:eg:{"id",:1,"author":"王安石", "content":"明妃曲二首:明妃初出汉宫时，泪湿春风鬓脚垂"}
      * @return
      */
-    public boolean updateOrInsertDocs(String indexName, List<Map<String, Object>> records);
+    public boolean addDocs(String indexName, List<Map<String, Object>> records);
+
+    /**
+     * 批量更新文件
+     * @param indexName 索引名稱
+     * @param records 文件(完全的), 裡面必須有column id(鍵), eg:{"author":"王安石", "title":"明妃曲二首", "content":"明妃初出汉宫时，泪湿春风鬓脚垂"}
+     * @return
+     */
+    public boolean updateDocs(String indexName, List<Map<String, Object>> records);
 
     /**
      * 在索引中索引加入文件
      * @param indexName 索引名稱
      * @param id 文件id
-     * @param record 文檔欄位名稱及值, eg:{"content":"Wellcome to ES"},{"title","Hello World"}
+     * @param record 文檔欄位名稱及值, eg:{"author":"王安石", "title":"明妃曲二首", "content":"明妃初出汉宫时，泪湿春风鬓脚垂"}
      * @return
      */
     public boolean addDoc(String indexName,
@@ -40,7 +49,7 @@ public interface IDocService {
      * 更新文件
      * @param indexName
      * @param id 文件id
-     * @param updateColumns 需要更新欄位
+     * @param updateColumns 需要更新欄位, eg:{"author":"王 安 石", "content":"明妃初出汉宫时，泪湿春风鬓脚垂"}
      * @return
      */
     public boolean updateDoc(String indexName, String id,

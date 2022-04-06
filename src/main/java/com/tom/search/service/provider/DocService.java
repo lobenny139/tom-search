@@ -76,19 +76,18 @@ public class DocService implements IDocService {
 
 
     @Override
-    public boolean updateOrInsertDocs(String indexName, List<Map<String, Object>> records) {
-        logger.info("準備寫入/更新" + records.size() +"筆文件.");
+    public boolean updateDocs(String indexName, List<Map<String, Object>> records) {
+        logger.info("準備更新" + records.size() +"筆文件.");
         StringBuilder sb = null;
         try {
             BulkRequest request = new BulkRequest();
             sb = new StringBuilder();
-
             for(Map<String, Object> record : records){
                 String id = record.get("id").toString();
                 sb.append(id + ",");
                 record.remove("id");
                 request.add(
-                        new UpdateRequest().index(indexName).id(id).doc(record).retryOnConflict(3).fetchSource(true).upsert()
+                    new UpdateRequest().index(indexName).id(id).doc(record).retryOnConflict(3).fetchSource(true)
                 );
             }
 
@@ -99,14 +98,45 @@ public class DocService implements IDocService {
                     logger.error("{}\t{}", r.getId(), r.getFailureMessage());
                 }
             }
-            logger.info("成功寫入/更新" + response.getItems().length + "筆文件.");
-
+            logger.info("成功更新" + response.getItems().length + "筆文件.");
             return !response.hasFailures();
         }catch(Exception e){
             e.printStackTrace();
-            throw new RuntimeException("無法寫入/更新文件[id=" + sb + "], cause by " + e.getMessage());
+            throw new RuntimeException("無法更新文件[id=" + sb + "], cause by " + e.getMessage());
         }
     }
+
+    @Override
+    public boolean addDocs(String indexName, List<Map<String, Object>> records) {
+        logger.info("準備寫入" + records.size() +"筆文件.");
+        StringBuilder sb = null;
+        try {
+            BulkRequest request = new BulkRequest();
+            sb = new StringBuilder();
+            for(Map<String, Object> record : records){
+                String id = record.get("id").toString();
+                sb.append(id + ",");
+                record.remove("id");
+                request.add(
+                    new IndexRequest(indexName).id(id).source(record)
+                );
+            }
+
+            sb = new StringBuilder(sb.substring(0, sb.length() - 1));
+            BulkResponse response = getClient().bulk(request, RequestOptions.DEFAULT);
+            for (BulkItemResponse r : response.getItems()) {
+                if (r.isFailed()) {
+                    logger.error("{}\t{}", r.getId(), r.getFailureMessage());
+                }
+            }
+            logger.info("成功寫入" + response.getItems().length + "筆文件.");
+            return !response.hasFailures();
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new RuntimeException("無法寫入文件[id=" + sb + "], cause by " + e.getMessage());
+        }
+    }
+
 
 
 
@@ -293,9 +323,6 @@ public class DocService implements IDocService {
             ///高亮
             HighlightBuilder highlightBuilder = new HighlightBuilder();
             //设置高亮字段
-//            for(int i = 0; i < searchColumns.length; i++){
-//                highlightBuilder.field(searchColumns[i]);
-//            }
             for(String colimnInIndex:stringColumnsInIndex){
                 highlightBuilder.field(colimnInIndex);
             }
