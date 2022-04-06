@@ -79,7 +79,7 @@ public interface IDocService {
      * 以關健字查詢文件
      * @param indexName 索引名稱
      * @param keyWord 關健字
-     * @param sortedColumn 排序欄位
+     * @param sortedColumn 排序欄位, eg:{"createDate",1}/{"createDate",0} <-- 0=asc,1=desc
      * @param timeOutSeconds ES 服務器timeout時間
      * @param start 從那筆開始
      * @param size  共取幾筆

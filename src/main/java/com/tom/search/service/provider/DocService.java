@@ -23,6 +23,7 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MultiMatchQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -298,7 +299,6 @@ public class DocService implements IDocService {
                                 int minimumShouldMatch,
                                 int slop,
                                 String... searchColumns )  {
-
         String expandSearchColumns = null;
         if(searchColumns != null && searchColumns.length > 0){
             expandSearchColumns = array2String(searchColumns);
@@ -357,7 +357,6 @@ public class DocService implements IDocService {
             SearchResponse response = getClient().search(searchRequest, RequestOptions.DEFAULT);
 
             logger.info("找到" + response.getHits().getHits().length + "筆記錄,以[" + sb2 + "]排序.");
-//            return convertResponse2DataSet( response, searchColumns );
             return convertResponse2DataSet( response, stringColumnsInIndex );
 
         }catch(Exception e){
