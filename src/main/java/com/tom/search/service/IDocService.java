@@ -29,7 +29,7 @@ public interface IDocService {
     /**
      * 批量更新文件
      * @param indexName 索引名稱
-     * @param records 文件(完全的), 裡面必須有column id(鍵), eg:{"author":"王安石", "title":"明妃曲二首", "content":"明妃初出汉宫时，泪湿春风鬓脚垂"}
+     * @param records 文件(完全的), 裡面必須有column id(鍵), eg:[{"author":"王安石", "title":"明妃曲二首", "content":"明妃初出汉宫时，泪湿春风鬓脚垂"}]
      * @return
      */
     public boolean updateDocs(String indexName,
@@ -44,8 +44,7 @@ public interface IDocService {
      */
     public boolean addDoc(String indexName,
                           String id,
-                          Map<String,
-                          Object> record);
+                          Map<String, Object> record);
 
 
     /**

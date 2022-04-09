@@ -365,9 +365,9 @@ public class DocService implements IDocService {
             expandSearchColumns = array2String(searchColumns);
         }
         if(expandSearchColumns != null){
-            logger.info("準備以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆." );
+            logger.info("準備以關健字[" + keyWord + "]在索引[" + indexName + "]中查詢, 查詢欄位[" + expandSearchColumns + "], 從" + start + "筆開始, 取" + size + "筆." );
         }else{
-            logger.info("準備以關健字[" + keyWord +"]在索引[" + indexName + "]中查詢, 從" + start + "筆開始, 取" + size + "筆." );
+            logger.info("準備以關健字[" + keyWord + "]在索引[" + indexName + "]中查詢, 從" + start + "筆開始, 取" + size + "筆." );
         }
         try {
             MultiMatchQueryBuilder multiMatchQueryBuilder = null;
