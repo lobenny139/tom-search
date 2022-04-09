@@ -13,7 +13,8 @@ public interface IDocService {
      * @param id 文件id
      * @return
      */
-    public boolean delDoc(String indexName, String id);
+    public boolean delDoc(String indexName,
+                          String id);
 
 
     /**
@@ -22,7 +23,8 @@ public interface IDocService {
      * @param records 文件(完全的), 裡面必須有column id(鍵), eg:eg:{"id",:1,"author":"王安石", "content":"明妃曲二首:明妃初出汉宫时，泪湿春风鬓脚垂"}
      * @return
      */
-    public boolean addDocs(String indexName, List<Map<String, Object>> records);
+    public boolean addDocs(String indexName,
+                           List<Map<String, Object>> records);
 
     /**
      * 批量更新文件
@@ -30,7 +32,8 @@ public interface IDocService {
      * @param records 文件(完全的), 裡面必須有column id(鍵), eg:{"author":"王安石", "title":"明妃曲二首", "content":"明妃初出汉宫时，泪湿春风鬓脚垂"}
      * @return
      */
-    public boolean updateDocs(String indexName, List<Map<String, Object>> records);
+    public boolean updateDocs(String indexName,
+                              List<Map<String, Object>> records);
 
     /**
      * 在索引中索引加入文件
@@ -52,7 +55,8 @@ public interface IDocService {
      * @param updateColumns 需要更新欄位, eg:{"author":"王 安 石", "content":"明妃初出汉宫时，泪湿春风鬓脚垂"}
      * @return
      */
-    public boolean updateDoc(String indexName, String id,
+    public boolean updateDoc(String indexName,
+                             String id,
                              Map<String, Object> updateColumns) ;
 
     /**
@@ -61,7 +65,8 @@ public interface IDocService {
      * @param id 文件id
      * @return
      */
-    public DataSet getDoc(String indexName, String id);
+    public DataSet getDoc(String indexName,
+                          String id);
 
 
     /**
@@ -79,7 +84,7 @@ public interface IDocService {
      * 以關健字查詢文件
      * @param indexName 索引名稱
      * @param keyWord 關健字
-     * @param sortedColumn 排序欄位, eg:{"createDate",1}/{"createDate",0} <-- 0=asc,1=desc
+     * @param sortedColumn 排序欄位, eg1:{"createDate",1}, eg2:{"createDate",0} <-- 0=asc,1=desc
      * @param timeOutSeconds ES 服務器timeout時間
      * @param start 從那筆開始
      * @param size  共取幾筆
@@ -88,46 +93,35 @@ public interface IDocService {
      * @param searchColumns 在那些欄位查詢
      * @return
      */
+    public DataSet searchDocByColumn(   String indexName,
+                                        String keyWord,
+                                        Map<String, Integer> sortedColumn,
+                                        int timeOutSeconds,
+                                        int start,
+                                        int size,
+                                        int minimumShouldMatch,
+                                        int slop,
+                                        String... searchColumns  );
+
+    /**
+     * 以關健字查詢文件, 所有欄位
+     * @param indexName
+     * @param keyWords, eg1:杜甫 李白, eg2:+杜甫 -李白
+     * @param sortedColumn 排序欄位, eg1:{"createDate",1}, eg2:{"createDate",0} <-- 0=asc,1=desc
+     * @param timeOutSeconds ES 服務器timeout時間
+     * @param start 從那筆開始
+     * @param size  共取幾筆
+     * @param minimumShouldMatch 關健字切詞後命中率, 台大停電 -> 台大 大停 停電, 切了3個, 100=>全部命中, 70=3個*0.7=2.1,取整數=2 => 命中2個
+     * @param slop 關健字切詞後跨度 0=> 全部一起, 5=> 移動5個(台大xxxx大停xxxxx停電)
+     * @return
+     */
     public DataSet searchDoc(   String indexName,
-                                String keyWord,
+                                String keyWords,
                                 Map<String, Integer> sortedColumn,
                                 int timeOutSeconds,
                                 int start,
                                 int size,
                                 int minimumShouldMatch,
-                                int slop,
-                                String... searchColumns  );
-
-    /**
-     * 以關健字查詢文件
-     * @param indexName
-     * @param keyWord
-     * @param sortColumnInfo
-     * @param start
-     * @param size
-     * @param searchColumns
-     * @return
-     */
-    public DataSet searchDoc(   String indexName,
-                                String keyWord,
-                                Map<String, Integer> sortColumnInfo,
-                                int start,
-                                int size,
-                                String... searchColumns  );
-
-    /**
-     * 以關健字查詢文件
-     * @param indexName
-     * @param keyWord
-     * @param sortedColumn
-     * @param start
-     * @param size
-     * @return
-     */
-    public DataSet searchDoc(   String indexName,
-                                String keyWord,
-                                Map<String, Integer> sortedColumn,
-                                int start,
-                                int size);
+                                int slop);
 
 }

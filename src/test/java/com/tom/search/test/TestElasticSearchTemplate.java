@@ -66,36 +66,20 @@ public class TestElasticSearchTemplate {
     @Test
     public void testBooleanQuery(){
         String indexName="magazine";
-        BoolQueryBuilder qb = QueryBuilders.boolQuery();
-//  match_all
-//        qb.must(QueryBuilders.matchAllQuery()); //匹配所有记录5条
 
-//        {
-//            qb.must(QueryBuilders.termQuery("author", "李白")); // 3条
-//
-//        }
-//        {
-//            qb.must(QueryBuilders.termQuery("author", "李白"));
-//            qb.must(QueryBuilders.termQuery("content", "黃河")); ////1条
-//        }
+        BoolQueryBuilder vQAll = QueryBuilders.boolQuery();
 
-//        {
-//
-//            qb.should(QueryBuilders.queryStringQuery("淑琴核").field("author")); //2条，对字符串添加双引
-//            qb.should(QueryBuilders.queryStringQuery("李白").field("author"));
-//            qb.mustNot(QueryBuilders.queryStringQuery("故乡").field("content"));
-//        }
+        MultiMatchQueryBuilder multiMatchQueryBuilder1 =
+                QueryBuilders.multiMatchQuery("李白").minimumShouldMatch("100%").slop(0);
 
-        qb = QueryBuilders.boolQuery()
-//                .should(QueryBuilders.multiMatchQuery("李白"))
-                .must(QueryBuilders.multiMatchQuery("头望").minimumShouldMatch("100%").slop(0));
+        MultiMatchQueryBuilder multiMatchQueryBuilder2 =
+                QueryBuilders.multiMatchQuery("王维").minimumShouldMatch("100%").slop(0);
 
 
-//        qb.must(QueryBuilders.termQuery("type","1")).must(QueryBuilders.termQuery("categoryName","女装")) //0条
-//        qb.must(QueryBuilders.termQuery("categoryName", "女装")); //0
+        vQAll.should(multiMatchQueryBuilder1);
+        vQAll.should(multiMatchQueryBuilder2);
 
-
-        SearchSourceBuilder ssb = new SearchSourceBuilder().query(qb).from(0).size(60);// 影响聚合查询
+        SearchSourceBuilder ssb = new SearchSourceBuilder().query(vQAll).from(0).size(60);// 影响聚合查询
         try {
             SearchResponse response = restHighLevelClient.search(
                     new SearchRequest().indices(indexName).source(ssb),
@@ -106,6 +90,7 @@ public class TestElasticSearchTemplate {
             System.out.println(response.getHits().getTotalHits().value);
             SearchHit hits[] = response.getHits().getHits();
             for (SearchHit hit : hits) {
+                System.out.print(hit.getId() + " ");
                 Map<String, Object> sourceAsMap = hit.getSourceAsMap();
                 System.out.println(sourceAsMap);
             }

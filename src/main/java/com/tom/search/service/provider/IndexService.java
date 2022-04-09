@@ -38,6 +38,8 @@ public class IndexService implements IIndexService {
     @Qualifier(value = "restHighLevelClient")
     protected RestHighLevelClient client;
 
+
+
     @Override
     public List<Map<String, Object>> getIndexFieldsInfo(String indexName) {
         logger.info("準備取得索引[" + indexName + "]欄位資訊.");

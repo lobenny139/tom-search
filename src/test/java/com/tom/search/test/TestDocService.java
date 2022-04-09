@@ -87,21 +87,37 @@ public class TestDocService {
         int timeOutSeconds = 10;
         int minimumShouldMatch = 100;
         int slop = 0;
-        DataSet rs = service.searchDoc(indexName, keyword, sortColumn, timeOutSeconds, start,  size, minimumShouldMatch, slop, searchColumn1,searchColumn2, searchColumn3);
+        DataSet rs = service.searchDocByColumn(indexName, keyword, sortColumn, timeOutSeconds, start,  size, minimumShouldMatch, slop, searchColumn1,searchColumn2, searchColumn3);
         System.out.println(new ObjectMapper().writeValueAsString(rs));
     }
 
+//    @Test
+//    public void testSearchDoc2() throws JsonProcessingException {
+//        String indexName="magazine";
+//        String keyword = "杜甫";
+//        Map<String, Integer> sortColumn = new HashMap<>();
+//        sortColumn.put("createDate",0);
+//        int start = 0;
+//        int size = 100;
+//        DataSet rs = service.searchDocByColumn(indexName, keyword, sortColumn, start,  size);
+//        System.out.println(new ObjectMapper().writeValueAsString(rs));
+//    }
+
     @Test
-    public void testSearchDoc2() throws JsonProcessingException {
+    public void testSearchDoc3() throws JsonProcessingException {
         String indexName="magazine";
-        String keyword = "杜甫";
+        String keyword = "杜甫 李白";
         Map<String, Integer> sortColumn = new HashMap<>();
         sortColumn.put("createDate",0);
         int start = 0;
         int size = 100;
-        DataSet rs = service.searchDoc(indexName, keyword, sortColumn, start,  size);
+        int timeOutSeconds = 10;
+        int minimumShouldMatch = 100;
+        int slop = 0;
+        DataSet rs = service.searchDoc(indexName, keyword, sortColumn, timeOutSeconds, start,  size, minimumShouldMatch, slop);
         System.out.println(new ObjectMapper().writeValueAsString(rs));
     }
+
 
     @Test
     public void testAddDocs() throws JsonProcessingException {
@@ -143,4 +159,6 @@ public class TestDocService {
         //System.out.println(records);
         return (records);
     }
+
+
 }

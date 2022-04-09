@@ -267,38 +267,99 @@ public class DocService implements IDocService {
 
     }
 
-    @Override
-    public DataSet searchDoc(   String indexName,
-                                String keyWord,
-                                Map<String, Integer> sortedColumn,
-                                int start,
-                                int size
-    ){
-        return searchDoc(indexName, keyWord, sortedColumn,  5, start, size, 100, 0,  null  );
-    }
-
-
 
     @Override
     public DataSet searchDoc(   String indexName,
-                                String keyWord,
-                                Map<String, Integer> sortedColumn,
-                                int start,
-                                int size,
-                                String... searchColumns  ) {
-        return searchDoc(indexName, keyWord, sortedColumn,  5, start, size, 100, 0,  searchColumns  );
-    }
-
-    @Override
-    public DataSet searchDoc(   String indexName,
-                                String keyWord,
+                                String keyWords,
                                 Map<String, Integer> sortedColumn,
                                 int timeOutSeconds,
                                 int start,
                                 int size,
                                 int minimumShouldMatch,
-                                int slop,
-                                String... searchColumns )  {
+                                int slop) {
+        try {
+
+            logger.info("準備以關健字[" + keyWords + "]在索引[" + indexName + "]中查詢, 從" + start + "筆開始, 取" + size + "筆.");
+            BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+
+            for (String keyword : keyWords.split(" ")) {
+                if (keyword.startsWith("+")) {
+                    String word = keyword.trim().replace("+", "");
+                    boolQueryBuilder.must(
+                            QueryBuilders.multiMatchQuery( word ).minimumShouldMatch(minimumShouldMatch+"%").slop(slop)
+                    );
+                } else if (keyword.startsWith("-")) {
+                    String word = keyword.trim().replace("-", "");
+                    boolQueryBuilder.mustNot(
+                            QueryBuilders.multiMatchQuery( word ).minimumShouldMatch(minimumShouldMatch+"%").slop(slop)
+                    );
+                } else {
+                    String word = keyword.trim();
+                    boolQueryBuilder.should(
+                            QueryBuilders.multiMatchQuery( word ).minimumShouldMatch(minimumShouldMatch+"%").slop(slop)
+                    );
+                }
+            }
+
+            logger.info("ES Search Condition:" + boolQueryBuilder.toString());
+
+            String[] stringColumnsInIndex = this.convertStringColumnInIndex2Array(indexName);
+
+            ///高亮
+            HighlightBuilder highlightBuilder = new HighlightBuilder();
+            //设置高亮字段
+            for (String colimnInIndex : stringColumnsInIndex) {
+                highlightBuilder.field(colimnInIndex);
+            }
+
+            //如果要多个字段高亮,这项要为false
+            highlightBuilder.requireFieldMatch(true);
+            highlightBuilder.preTags("<span style='color:red'>");
+            highlightBuilder.postTags("</span>");
+            //下面这两项,如果你要高亮如文字内容等有很多字的字段,必须配置,不然会导致高亮不全,文章内容缺失等
+            highlightBuilder.fragmentSize(800000); //最大高亮分片数
+            highlightBuilder.numOfFragments(0); //从第一个分片获取高亮片段
+
+
+            //分頁
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder()
+                    .query(boolQueryBuilder)
+                    .from(start)
+                    .timeout(new TimeValue(timeOutSeconds, TimeUnit.SECONDS))
+                    .highlighter(highlightBuilder);
+
+            StringBuilder sb2 = new StringBuilder();
+            for (Map.Entry entry : sortedColumn.entrySet()) {
+                sb2.append(entry.getKey().toString() + ":" + (entry.getValue().toString().equals("0") ? "ASC" : "DESC") + ",");
+                sourceBuilder.sort(entry.getKey().toString(), (entry.getValue().toString().equals("0") ? SortOrder.ASC : SortOrder.DESC));
+            }
+            sb2 = new StringBuilder(sb2.substring(0, sb2.length() - 1));
+
+            //查詢
+            SearchRequest searchRequest = new SearchRequest()
+                    .allowPartialSearchResults(true)
+                    .indices(indexName)
+                    .source(sourceBuilder);
+            SearchResponse response = getClient().search(searchRequest, RequestOptions.DEFAULT);
+
+            logger.info("找到" + response.getHits().getHits().length + "筆記錄,以[" + sb2 + "]排序.");
+            return convertResponse2DataSet(response, stringColumnsInIndex);
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new RuntimeException("無法以關健字[" + keyWords +"]在索引[" + indexName + "]中查詢, 從" + start + "筆開始, 取" + size + "筆, cause by " + e.getMessage());
+        }
+    }
+
+    @Override
+    public DataSet searchDocByColumn(  String indexName,
+                                       String keyWord,
+                                       Map<String, Integer> sortedColumn,
+                                       int timeOutSeconds,
+                                       int start,
+                                       int size,
+                                       int minimumShouldMatch,
+                                       int slop,
+                                       String... searchColumns )  {
         String expandSearchColumns = null;
         if(searchColumns != null && searchColumns.length > 0){
             expandSearchColumns = array2String(searchColumns);
@@ -317,6 +378,8 @@ public class DocService implements IDocService {
             }
             multiMatchQueryBuilder.minimumShouldMatch( minimumShouldMatch + "%" );
             multiMatchQueryBuilder.slop(slop);
+
+            logger.info("ES Search Condition:" + multiMatchQueryBuilder.toString());
 
             String[] stringColumnsInIndex = this.convertStringColumnInIndex2Array(indexName);
 
